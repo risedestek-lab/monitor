@@ -16,50 +16,6 @@ DOMAINS = [
     "https://www.risebet255.com/",
     "https://www.risebet256.com/",
     "https://www.risebet257.com/",
-    # buraya istediğin kadar domain ekle
-]
-
-STATE_FILE = "status.json"
-
-# eski durumları yükle
-try:
-    with open(STATE_FILE, "r") as f:
-        old_status = json.load(f)
-except:
-    old_status = {}
-
-new_status = {}
-
-for site in DOMAINS:
-    try:
-        r = requests.get(site, timeout=10)
-        status = r.status_code
-    except:
-        status = "DOWN"
-
-    new_status[site] = status
-
-    # değişiklik varsa mesaj at
-    if old_status.get(site) != status:
-        msg = f"🚨 {site} durumu değişti: {status}"
-        requests.get(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            params={"chat_id": CHAT_ID, "text": msg}
-        )
-
-# yeni durumu kaydet
-with open(STATE_FILE, "w") as f:
-    json.dump(new_status, f)
-
-import requests
-import os
-import json
-
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
-
-DOMAINS = [
-    "https://www.risebet249.com/"
 ]
 
 PROXIES = [
@@ -83,42 +39,50 @@ def check_with_proxy(url):
             continue
     return "TR_DOWN"
 
-# eski durum
+# eski durumları yükle
 try:
     with open(STATE_FILE, "r") as f:
-        old = json.load(f)
+        old_status = json.load(f)
 except:
-    old = {}
+    old_status = {}
 
-new = {}
+new_status = {}
 
 for site in DOMAINS:
 
-    # global kontrol
+    # GLOBAL
     try:
         r = requests.get(site, timeout=8)
         global_status = r.status_code
     except:
         global_status = "DOWN"
 
-    # TR kontrol (proxy)
+    # TR
     tr_status = check_with_proxy(site)
 
-    new[site] = {"global": global_status, "tr": tr_status}
+    new_status[site] = {
+        "global": global_status,
+        "tr": tr_status
+    }
 
-    if old.get(site) != new[site]:
-        msg = f"""🚨 DURUM DEĞİŞTİ
+    # SADECE DEĞİŞİMDE MESAJ
+    if old_status.get(site) == new_status[site]:
+        continue
+
+    msg = f"""
+🚨 DOMAIN DURUMU
+
+🔗 {site}
 
 🌍 Global: {global_status}
 🇹🇷 TR: {tr_status}
-
-🔗 {site}
 """
-        requests.get(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            params={"chat_id": CHAT_ID, "text": msg}
-        )
+
+    requests.get(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        params={"chat_id": CHAT_ID, "text": msg}
+    )
 
 # kaydet
 with open(STATE_FILE, "w") as f:
-    json.dump(new, f)
+    json.dump(new_status, f)
