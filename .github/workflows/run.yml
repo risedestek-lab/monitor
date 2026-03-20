@@ -20,3 +20,10 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+- name: Save state
+  run: |
+    git config --global user.name "bot"
+    git config --global user.email "bot@bot.com"
+    git add status.json || true
+    git commit -m "update status" || true
+    git push || true
