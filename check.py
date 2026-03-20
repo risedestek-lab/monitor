@@ -6,7 +6,16 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 DOMAINS = [
+    "https://www.risebet248.com/",
     "https://www.risebet249.com/",
+    "https://www.risebet250.com/",
+    "https://www.risebet251.com/",
+    "https://www.risebet252.com/",
+    "https://www.risebet253.com/",
+    "https://www.risebet254.com/",
+    "https://www.risebet255.com/",
+    "https://www.risebet256.com/",
+    "https://www.risebet257.com/",
     # buraya istediğin kadar domain ekle
 ]
 
