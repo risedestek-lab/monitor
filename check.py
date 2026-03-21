@@ -1,6 +1,7 @@
 import requests
 import os
 import json
+from concurrent.futures import ThreadPoolExecutor
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
@@ -24,65 +25,51 @@ PROXIES = [
     "http://103.152.112.162:80",
 ]
 
-STATE_FILE = "status.json"
-
-def check_with_proxy(url):
-    for proxy in PROXIES:
-        try:
-            r = requests.get(
-                url,
-                proxies={"http": proxy, "https": proxy},
-                timeout=8
-            )
-            return r.status_code
-        except:
-            continue
-    return "TR_DOWN"
-
-# eski durumları yükle
-try:
-    with open(STATE_FILE, "r") as f:
-        old_status = json.load(f)
-except:
-    old_status = {}
-
-new_status = {}
-
-for site in DOMAINS:
-
+def check_site(site):
     # GLOBAL
     try:
-        r = requests.get(site, timeout=8)
+        r = requests.get(site, timeout=6)
         global_status = r.status_code
     except:
         global_status = "DOWN"
 
-    # TR
-    tr_status = check_with_proxy(site)
+    # TR (proxy)
+    tr_status = "TR_DOWN"
+    for proxy in PROXIES:
+        try:
+            r = requests.get(site, proxies={"http": proxy, "https": proxy}, timeout=6)
+            tr_status = r.status_code
+            break
+        except:
+            continue
 
-    new_status[site] = {
-        "global": global_status,
-        "tr": tr_status
-    }
+    return site, global_status, tr_status
 
-    # SADECE DEĞİŞİMDE MESAJ
-    if old_status.get(site) == new_status[site]:
-        continue
 
-    msg = f"""
-🚨 DOMAIN DURUMU
+results = []
 
-🔗 {site}
+with ThreadPoolExecutor(max_workers=10) as executor:
+    futures = [executor.submit(check_site, site) for site in DOMAINS]
+    for f in futures:
+        results.append(f.result())
 
-🌍 Global: {global_status}
-🇹🇷 TR: {tr_status}
-"""
 
-    requests.get(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        params={"chat_id": CHAT_ID, "text": msg}
-    )
+# RAPOR OLUŞTUR
+msg = "📊 DOMAIN RAPORU\n\n"
 
-# kaydet
-with open(STATE_FILE, "w") as f:
-    json.dump(new_status, f)
+for site, g, tr in results:
+    durum = "✅"
+
+    if g != 200:
+        durum = "❌ GLOBAL DOWN"
+    elif g == 200 and tr != 200:
+        durum = "🚨 TR ENGEL"
+
+    msg += f"{durum}\n🌍 {g} | 🇹🇷 {tr}\n🔗 {site}\n\n"
+
+
+# TELEGRAM'A GÖNDER
+requests.get(
+    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+    params={"chat_id": CHAT_ID, "text": msg}
+)
