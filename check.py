@@ -1,3 +1,5 @@
+print("🔥 YENİ SİSTEM AKTİF 🔥")
+
 import requests
 import os
 import json
